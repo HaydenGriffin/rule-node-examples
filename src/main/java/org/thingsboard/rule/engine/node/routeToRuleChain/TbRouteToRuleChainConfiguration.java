@@ -13,20 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.thingsboard.rule.engine.node.filter;
+package org.thingsboard.rule.engine.node.routeToRuleChain;
 
 import lombok.Data;
 import org.thingsboard.rule.engine.api.NodeConfiguration;
 
 @Data
-public class TbKeyFilterNodeConfiguration implements NodeConfiguration<TbKeyFilterNodeConfiguration> {
+public class TbRouteToRuleChainConfiguration implements NodeConfiguration<TbRouteToRuleChainConfiguration> {
 
     private String key;
 
     @Override
-    public TbKeyFilterNodeConfiguration defaultConfiguration() {
-        TbKeyFilterNodeConfiguration configuration = new TbKeyFilterNodeConfiguration();
-        configuration.setKey(null);
+    public TbRouteToRuleChainConfiguration defaultConfiguration() {
+        TbRouteToRuleChainConfiguration configuration = new TbRouteToRuleChainConfiguration();
+        configuration.setKey("mac_address");
         return configuration;
     }
 }

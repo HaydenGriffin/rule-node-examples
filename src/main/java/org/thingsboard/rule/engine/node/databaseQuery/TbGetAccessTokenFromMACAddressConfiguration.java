@@ -13,26 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.thingsboard.rule.engine.node.enrichment;
+package org.thingsboard.rule.engine.node.databaseQuery;
 
 import lombok.Data;
 import org.thingsboard.rule.engine.api.NodeConfiguration;
 
-/**
- * Created by mshvayka on 10.08.18.
- */
 @Data
-public class TbGetSumIntoMetadataConfiguration implements NodeConfiguration<TbGetSumIntoMetadataConfiguration> {
+public class TbGetAccessTokenFromMACAddressConfiguration implements NodeConfiguration<TbGetAccessTokenFromMACAddressConfiguration> {
 
-    private String inputKey;
-    private String outputKey;
-
+    private String key;
 
     @Override
-    public TbGetSumIntoMetadataConfiguration defaultConfiguration() {
-        TbGetSumIntoMetadataConfiguration configuration = new TbGetSumIntoMetadataConfiguration();
-        configuration.setInputKey("temperature");
-        configuration.setOutputKey("TemperatureSum");
+    public TbGetAccessTokenFromMACAddressConfiguration defaultConfiguration() {
+        TbGetAccessTokenFromMACAddressConfiguration configuration = new TbGetAccessTokenFromMACAddressConfiguration();
+        configuration.setKey("mac_address");
         return configuration;
     }
 }

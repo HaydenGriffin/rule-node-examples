@@ -13,26 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.thingsboard.rule.engine.node.transform;
+package org.thingsboard.rule.engine.node.prelook;
 
 import lombok.Data;
 import org.thingsboard.rule.engine.api.NodeConfiguration;
 
-
 @Data
-public class TbCalculateSumNodeConfiguration implements NodeConfiguration<TbCalculateSumNodeConfiguration> {
+public class TbPrelookConfiguration implements NodeConfiguration<TbPrelookConfiguration> {
 
-    private String inputKey;
-    private String outputKey;
+    private String key;
 
     @Override
-    public TbCalculateSumNodeConfiguration defaultConfiguration() {
-        TbCalculateSumNodeConfiguration configuration = new TbCalculateSumNodeConfiguration();
-        configuration.setInputKey("temperature");
-        configuration.setOutputKey("TemperatureSum");
+    public TbPrelookConfiguration defaultConfiguration() {
+        TbPrelookConfiguration configuration = new TbPrelookConfiguration();
+        configuration.setKey("mac_address");
         return configuration;
     }
-
 }
-
-

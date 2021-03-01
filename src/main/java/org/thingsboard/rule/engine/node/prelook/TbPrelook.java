@@ -2,13 +2,13 @@ package org.thingsboard.rule.engine.node.prelook;
 
 /**
  * Copyright © 2018 The Thingsboard Authors
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.sql.*;
 import java.util.Iterator;
+
 import static org.thingsboard.rule.engine.api.TbRelationTypes.SUCCESS;
 
 
@@ -84,147 +85,148 @@ public class TbPrelook implements TbNode {
                     }
                 }
             }
-            if (!hasParamsField) {
-                ctx.tellFailure(msg, new Exception("Message doesn't contain params"));
-            }
-
-            if (!hasMACAddress) {
-                ctx.tellFailure(msg, new Exception("Message doesn't contain the key: " + key));
-            }
-
-            BigInteger deviceId = null, deviceRoleId = null, deviceSpecificationId = null;
-            try {
-                connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/kss_technologies?user=postgres&password=postgres_!m@c5");
-            }catch (SQLException e) {
-                ctx.tellFailure(msg, new Exception("Something went wrong establishing the database connection: " + e));
-            }
-
-            try {
-                  PreparedStatement preparedStatement = connection.prepareStatement("SELECT d.id AS device_id, dr.id AS device_role_id, ds.id AS device_specification_id FROM device d JOIN device_role dr on d.device_role_id = dr.id JOIN device_specification ds on dr.device_specification_id = ds.id WHERE d.mac_address = ?");
-                preparedStatement.setString(1, macAddress);
-                ResultSet rs = preparedStatement.executeQuery();
-                while(rs.next()) {
-                    deviceId = BigInteger.valueOf(rs.getLong("device_id"));
-                    deviceRoleId = BigInteger.valueOf(rs.getLong("device_role_id"));
-                    deviceSpecificationId = BigInteger.valueOf(rs.getLong("device_specification_id"));
-                }
-                rs.close();
-                if (deviceId != null) {
-                    preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                            "    SELECT true FROM device_mac_address_mode WHERE device_id = ?\n" +
-                            "           )");
-                    preparedStatement.setObject(1, deviceId);
-                    while(rs.next()) {
-                        requiresMode = rs.getBoolean(1);
-                    }
-                    preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                            "    SELECT true FROM device_mac_address_sense WHERE device_id = ?\n" +
-                            "           )");
-                    preparedStatement.setObject(1, deviceId);
-                    while(rs.next()) {
-                        requiresSense = rs.getBoolean(1);
-                    }
-                    preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                            "    SELECT true FROM device_mac_address_rule WHERE device_id = ?\n" +
-                            "           )");
-                    preparedStatement.setObject(1, deviceId);
-                    while(rs.next()) {
-                        requiresRules = rs.getBoolean(1);
-                    }
-                } else {
-                    ctx.tellFailure(msg, new Exception("No deviceId found in database"));
-                }
-                if (deviceRoleId != null) {
-                    if (!requiresMode) {
-                        preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                                "    SELECT true FROM device_role_mode WHERE device_role_id = ?\n" +
-                                "           )");
-                        preparedStatement.setObject(1, deviceRoleId);
-                        while(rs.next()) {
-                            requiresMode = rs.getBoolean(1);
-                        }
-                    }
-                   if (!requiresSense) {
-                       preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                               "    SELECT true FROM device_role_sense WHERE device_role_id = ?\n" +
-                               "           )");
-                       preparedStatement.setObject(1, deviceRoleId);
-                       while(rs.next()) {
-                           requiresSense = rs.getBoolean(1);
-                       }
-                   }
-                   if (!requiresRules) {
-                       preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                               "    SELECT true FROM device_role_rule WHERE device_role_id = ?\n" +
-                               "           )");
-                       preparedStatement.setObject(1, deviceId);
-                       while(rs.next()) {
-                           requiresRules = rs.getBoolean(1);
-                       }
-                   }
-                    preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                            "    SELECT true FROM device_role_database_definition WHERE device_role_id = ?\n" +
-                            "           )");
-                    preparedStatement.setObject(1, deviceRoleId);
-                    while(rs.next()) {
-                        requiresIdent = rs.getBoolean(1);
-                    }
-                } else {
-                    ctx.tellFailure(msg, new Exception("No deviceRoleId found in database"));
-                }
-                if (deviceSpecificationId != null) {
-                    if (!requiresMode) {
-                        preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                                "    SELECT true FROM device_specification_mode WHERE device_specification_id = ?\n" +
-                                "           )");
-                        preparedStatement.setObject(1, deviceSpecificationId);
-                        while(rs.next()) {
-                            requiresMode = rs.getBoolean(1);
-                        }
-                    }
-                    if (!requiresSense) {
-                        preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                                "    SELECT true FROM device_specification_sense WHERE device_specification_id = ?\n" +
-                                "           )");
-                        preparedStatement.setObject(1, deviceSpecificationId);
-                        while(rs.next()) {
-                            requiresSense = rs.getBoolean(1);
-                        }
-                    }
-                    if (!requiresRules) {
-                        preparedStatement = connection.prepareStatement("SELECT EXISTS(\n" +
-                                "    SELECT true FROM device_specification_rule WHERE device_specification_id = ?\n" +
-                                "           )");
-                        preparedStatement.setObject(1, deviceSpecificationId);
-                        while(rs.next()) {
-                            requiresRules = rs.getBoolean(1);
-                        }
-                    }
-                } else {
-                    ctx.tellFailure(msg, new Exception("No deviceSpecificationId found in database"));
-                }
-
-            }catch (SQLException e) {
-                ctx.tellFailure(msg, new Exception("Something went wrong calling a query: " + e));
-            }
-            ArrayNode jsonResponse = mapper.createArrayNode();
-            if (requiresMode) {
-                jsonResponse.add("MODE");
-            }
-            if (requiresSense) {
-                jsonResponse.add("SENSE");
-            }
-            if (requiresIdent) {
-                jsonResponse.add("IDENT");
-            }
-            if (requiresRules) {
-                jsonResponse.add("RULES");
-            }
-            TbMsg newMsg = TbMsg.transformMsg(msg, msg.getType(), msg.getOriginator(), msg.getMetaData(), mapper.writeValueAsString(jsonResponse));
-            ctx.tellNext(newMsg, SUCCESS);
         } catch (JsonProcessingException e) {
             ctx.tellFailure(msg, new Exception("Something went wrong whilst reading the inputted object: " + e));
         }
+
+        if (!hasParamsField) {
+            ctx.tellFailure(msg, new Exception("Message doesn't contain params"));
+        }
+
+        if (!hasMACAddress) {
+            ctx.tellFailure(msg, new Exception("Message doesn't contain the key: " + key));
+        }
+
+        BigInteger deviceId = null, deviceRoleId = null, deviceSpecificationId = null;
+        try {
+            connection = DriverManager.getConnection("jdbc:postgresql://localhost:5432/kss_technologies?user=postgres&password=postgres_!m@c5");
+        } catch (SQLException e) {
+            ctx.tellFailure(msg, new Exception("Something went wrong establishing the database connection: " + e));
+        }
+
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement("SELECT d.id AS device_id, dr.id AS device_role_id, ds.id AS device_specification_id FROM device d JOIN device_role dr on d.device_role_id = dr.id JOIN device_specification ds on dr.device_specification_id = ds.id WHERE d.mac_address = ?");
+            preparedStatement.setString(1, macAddress);
+            ResultSet rs = preparedStatement.executeQuery();
+            while (rs.next()) {
+                deviceId = BigInteger.valueOf(rs.getLong("device_id"));
+                deviceRoleId = BigInteger.valueOf(rs.getLong("device_role_id"));
+                deviceSpecificationId = BigInteger.valueOf(rs.getLong("device_specification_id"));
+            }
+            if (deviceId == null) {
+                ctx.tellFailure(msg, new Exception("No deviceId found in database"));
+            }
+            preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_mac_address_mode WHERE device_id = ?)");
+            preparedStatement.setObject(1, deviceId);
+            rs = preparedStatement.executeQuery();
+            while (rs.next()) {
+                requiresMode = rs.getBoolean(1);
+                ctx.tellFailure(msg, new Exception("DEBUGGING: " + requiresMode));
+            }
+            preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_mac_address_sense WHERE device_id = ?)");
+            preparedStatement.setObject(1, deviceId);
+            rs = preparedStatement.executeQuery();
+            while (rs.next()) {
+                requiresSense = rs.getBoolean(1);
+            }
+            preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_mac_address_rule WHERE device_id = ?)");
+            preparedStatement.setObject(1, deviceId);
+            rs = preparedStatement.executeQuery();
+            while (rs.next()) {
+                requiresRules = rs.getBoolean(1);
+            }
+
+            if (deviceRoleId == null) {
+                ctx.tellFailure(msg, new Exception("No deviceRoleId found in database"));
+            }
+
+            if (!requiresMode) {
+                preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_role_mode WHERE device_role_id = ?)");
+                preparedStatement.setObject(1, deviceRoleId);
+                rs = preparedStatement.executeQuery();
+                while (rs.next()) {
+                    requiresMode = rs.getBoolean(1);
+                }
+            }
+            if (!requiresSense) {
+                preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_role_sense WHERE device_role_id = ?)");
+                preparedStatement.setObject(1, deviceRoleId);
+                rs = preparedStatement.executeQuery();
+                while (rs.next()) {
+                    requiresSense = rs.getBoolean(1);
+                }
+            }
+            if (!requiresRules) {
+                preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_role_rule WHERE device_role_id = ?)");
+                preparedStatement.setObject(1, deviceId);
+                rs = preparedStatement.executeQuery();
+                while (rs.next()) {
+                    requiresRules = rs.getBoolean(1);
+                }
+            }
+            preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_role_database_definition WHERE device_role_id = ?)");
+            preparedStatement.setObject(1, deviceRoleId);
+            rs = preparedStatement.executeQuery();
+            while (rs.next()) {
+                requiresIdent = rs.getBoolean(1);
+            }
+
+
+            if (deviceSpecificationId == null) {
+                ctx.tellFailure(msg, new Exception("No deviceSpecificationId found in database"));
+            }
+
+            if (!requiresMode) {
+                preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_specification_mode WHERE device_specification_id = ?)");
+                preparedStatement.setObject(1, deviceSpecificationId);
+                rs = preparedStatement.executeQuery();
+                while (rs.next()) {
+                    requiresMode = rs.getBoolean(1);
+                }
+            }
+            if (!requiresSense) {
+                preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_specification_sense WHERE device_specification_id = ?)");
+                preparedStatement.setObject(1, deviceSpecificationId);
+                rs = preparedStatement.executeQuery();
+                while (rs.next()) {
+                    requiresSense = rs.getBoolean(1);
+                }
+            }
+            if (!requiresRules) {
+                preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_specification_rule WHERE device_specification_id = ?)");
+                preparedStatement.setObject(1, deviceSpecificationId);
+                rs = preparedStatement.executeQuery();
+                while (rs.next()) {
+                    requiresRules = rs.getBoolean(1);
+                }
+            }
+
+            rs.close();
+        } catch (SQLException e) {
+            ctx.tellFailure(msg, new Exception("Something went wrong calling a query: " + e));
+        }
+        ArrayNode requiredMicroserviceArray = mapper.createArrayNode();
+        ObjectNode jsonResponse = mapper.createObjectNode();
+        if (requiresMode) {
+            requiredMicroserviceArray.add("MODE");
+        }
+        if (requiresSense) {
+            requiredMicroserviceArray.add("SENSE");
+        }
+        if (requiresIdent) {
+            requiredMicroserviceArray.add("IDENT");
+        }
+        if (requiresRules) {
+            requiredMicroserviceArray.add("RULES");
+        }
+        jsonResponse.set("MS", jsonResponse)
+        try {
+            TbMsg newMsg = TbMsg.transformMsg(msg, msg.getType(), msg.getOriginator(), msg.getMetaData(), mapper.writeValueAsString(jsonResponse));
+            ctx.tellNext(newMsg, SUCCESS);
+        } catch (Exception e) {
+            ctx.tellFailure(msg, new Exception("Something went wrong building response: " + e));
+        }
+
     }
 
 

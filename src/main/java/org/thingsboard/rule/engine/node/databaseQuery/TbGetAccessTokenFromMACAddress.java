@@ -108,7 +108,7 @@ public class TbGetAccessTokenFromMACAddress implements TbNode {
                 ctx.tellFailure(msg, new Exception("Something went wrong with the database call: " + e));
             }
         } catch (JsonProcessingException e) {
-            ctx.tellFailure(msg, new Exception("Something whent wrong whilst reading the inputted object: " + e));
+            ctx.tellFailure(msg, new Exception("Something went wrong whilst reading the inputted object: " + e));
         }
     }
 

@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.extern.slf4j.Slf4j;
 import org.thingsboard.rule.engine.api.RuleNode;
 import org.thingsboard.rule.engine.api.TbContext;
@@ -121,7 +122,6 @@ public class TbPrelook implements TbNode {
             rs = preparedStatement.executeQuery();
             while (rs.next()) {
                 requiresMode = rs.getBoolean(1);
-                ctx.tellFailure(msg, new Exception("DEBUGGING: " + requiresMode));
             }
             preparedStatement = connection.prepareStatement("SELECT EXISTS(SELECT true FROM device_mac_address_sense WHERE device_id = ?)");
             preparedStatement.setObject(1, deviceId);
@@ -205,6 +205,13 @@ public class TbPrelook implements TbNode {
         } catch (SQLException e) {
             ctx.tellFailure(msg, new Exception("Something went wrong calling a query: " + e));
         }
+        if (!requiresMode && !requiresSense && !requiresIdent && !requiresRules) {
+            try {
+                ctx.tellFailure(msg, new Exception("Cannot detect any db setup for mode, sense, ident or rules"));
+            } catch (Exception e) {
+                ctx.tellFailure(msg, new Exception("Something went wrong: " + e));
+            }
+        }
         ArrayNode requiredMicroserviceArray = mapper.createArrayNode();
         ObjectNode jsonResponse = mapper.createObjectNode();
         if (requiresMode) {
@@ -217,9 +224,10 @@ public class TbPrelook implements TbNode {
             requiredMicroserviceArray.add("IDENT");
         }
         if (requiresRules) {
-            requiredMicroserviceArray.add("RULES");
+            requiredMicroserviceArray.add("RULE");
         }
-        jsonResponse.set("MS", jsonResponse)
+        jsonResponse.set("ms", requiredMicroserviceArray);
+        jsonResponse.put("mac", macAddress);
         try {
             TbMsg newMsg = TbMsg.transformMsg(msg, msg.getType(), msg.getOriginator(), msg.getMetaData(), mapper.writeValueAsString(jsonResponse));
             ctx.tellNext(newMsg, SUCCESS);
